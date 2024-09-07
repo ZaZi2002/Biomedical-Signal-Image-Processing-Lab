@@ -1,0 +1,190 @@
+clc
+close all
+clear all
+
+%% Part1
+load("X_org.mat");
+load("Electrodes.mat")
+fs = 256;  % Sampling freq
+t = 0.001 : 1/fs : 40;  % EEG time length
+offset = max(max(abs(X_org)))/3 ;
+disp_eeg(X_org,offset,fs,Electrodes.labels);
+title("X-org")
+xlim('tight');
+grid minor
+
+%% Part2
+load("X_noise.mat");
+load("Electrodes.mat")
+offset = max(max(abs(X_noise)))/3 ;
+disp_eeg(X_noise,offset,fs,Electrodes.labels);
+title("X-noise")
+xlim('tight');
+grid minor
+
+%% Part3
+p_sig = 0;
+p_noise = 0;
+% calculating energies
+for i = 1:32
+    for j = 1:length(X_org(1,:))
+        p_sig = p_sig + X_org(i,j)^2; % energy of main signal
+        p_noise = p_noise + X_noise(i,j)^2; % energy of noise
+    end
+end
+sigma_snr15 = ((p_sig/p_noise)*10^(15/10))^0.5;
+sigma_snr5 = ((p_sig/p_noise)*10^(5/10))^0.5;
+X_15 = X_org + sigma_snr15*X_noise; % noisy signal with -15 SNR
+X_5 = X_org + sigma_snr5*X_noise; % noisy signal with -5 SNR
+
+offset = max(max(abs(X_5)))/3 ;
+disp_eeg(X_5,offset,fs,Electrodes.labels);
+title("signal + noise(-5 SNR)")
+xlim('tight');
+grid minor
+
+offset = max(max(abs(X_15))/3) ;
+disp_eeg(X_15,offset,fs,Electrodes.labels);
+title("signal + noise(-15 SNR)")
+xlim('tight');
+grid minor
+
+%% Part4
+[F_15,W_15,K_15] = COM2R(X_15,32);
+[F_5,W_5,K_5] = COM2R(X_15,32);
+Sources_15 = W_15*X_15;
+Sources_5 = W_5*X_5;
+
+offset = max(max(abs(Sources_15)))/3 ;
+disp_eeg(Sources_15,offset,fs);
+title("Sources (-15 SNR)")
+xlim('tight');
+grid minor
+
+offset = max(max(abs(Sources_5)))/3 ;
+disp_eeg(Sources_5,offset,fs);
+title("Sources (-5 SNR)")
+xlim('tight');
+grid minor
+
+%% Part5&6
+SelSources = [7 15 18 19 25 30 31];
+X_den_15 = F_15(:,SelSources)*Sources_15(SelSources,:);
+X_den_5 = F_5(:,SelSources)*Sources_5(SelSources,:);
+
+offset = max(max(abs(X_den_5)))/3 ;
+disp_eeg(X_den_5,offset,fs,Electrodes.labels);
+title("X-den (-5 SNR)")
+xlim('tight');
+grid minor
+
+offset = max(max(abs(X_den_15)))/3 ;
+disp_eeg(X_den_15,offset,fs,Electrodes.labels);
+title("X-den (-15 SNR)")
+xlim('tight');
+grid minor
+
+%% Part7
+% -15 SNR
+figure("Name","Part7-15");
+subplot(3,2,1)
+plot(t,X_org(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-org')
+xlabel('Time (s)')
+
+subplot(3,2,3)
+plot(t,X_15(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-noise')
+xlabel('Time (s)')
+
+subplot(3,2,5)
+plot(t,X_den_15(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-den')
+xlabel('Time (s)')
+
+subplot(3,2,2)
+plot(t,X_org(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-org')
+xlabel('Time (s)')
+
+subplot(3,2,4)
+plot(t,X_15(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-noise')
+xlabel('Time (s)')
+
+subplot(3,2,6)
+plot(t,X_den_15(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-den')
+xlabel('Time (s)')
+
+% -5 SNR
+figure("Name","Part7-5");
+subplot(3,2,1)
+plot(t,X_org(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-org')
+xlabel('Time (s)')
+
+subplot(3,2,3)
+plot(t,X_5(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-noise')
+xlabel('Time (s)')
+
+subplot(3,2,5)
+plot(t,X_den_5(13,:));
+grid on;
+xlim('tight');
+title('13th channel x-den')
+xlabel('Time (s)')
+
+subplot(3,2,2)
+plot(t,X_org(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-org')
+xlabel('Time (s)')
+
+subplot(3,2,4)
+plot(t,X_5(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-noise')
+xlabel('Time (s)')
+
+subplot(3,2,6)
+plot(t,X_den_5(24,:));
+grid on;
+xlim('tight');
+title('24th channel x-den')
+xlabel('Time (s)')
+
+%% Part8
+a_5 = 0;
+a_15 = 0;
+b = 0;
+for i = 1:32
+    for j = 1:length(X_org(1,:))
+        a_5 = a_5 + (X_org(i,j)-X_den_5(i,j))^2;
+        a_15 = a_15 + (X_org(i,j)-X_den_15(i,j))^2;
+        b = b + (X_org(i,j))^2;
+    end
+end
+RRMSE_5 = (a_5/b)^0.5;
+RRMSE_15 = (a_15/b)^0.5;
+RRMSE_5
+RRMSE_15
